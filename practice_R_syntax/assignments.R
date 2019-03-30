@@ -31,4 +31,20 @@ solu <- c(first$frst[3],second$thd[3],third$scd[2],third$fot[3])
 for(i in solu){
   print(i)
 }
+############################3########################################
 
+primes <- c(2,3,5,7,11,13,17,19,23,29,31,37,41,43,47)
+for(i in primes){
+  for(t in 48:100){
+    if(t%%i!=0){
+        print(t)
+    
+    }
+  }
+}
+
+############################# 5########################################
+?mtcars
+auto_car <- mtcars %>%
+  filter(am==0 & gear>3 & (mpg<mean(mpg))) 
+auto_car
