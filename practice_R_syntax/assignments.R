@@ -107,4 +107,12 @@ mtcars2[mtcars2$am==0 & mtcars2$gear > 3  & mtcars2$mpg > mean(mtcars2$mpg),"bra
 set.seed(2)
 x = sample(letters[1:5],50, replace=T)
 y = sample(letters[1:3],50, replace=T)
-yt <- table(y)
+getmod <- function(v){
+  uniq <- unique(v)
+  return(uniq[which.max(tabulate(match(v,uniq)))])
+  
+  
+  
+}
+getmod(x)
+getmod(y)
