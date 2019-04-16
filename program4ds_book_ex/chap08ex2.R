@@ -15,3 +15,4 @@ count_occur <- function(lety,v){
   return(sum(v== lety))
 }
 count_occur("e",vectorslek)
+?pull

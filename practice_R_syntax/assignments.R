@@ -95,7 +95,16 @@ for (i in 48:100){
 }
 ############################# 5########################################
 library(dplyr)
-mtcars[mtcars$am==0 & mtcars$gear > 3  & mtcars$mpg > mean(mtcars$mpg)]
-auto_da <-mtcars %>% 
-  filter(am==0 & gear> 3 & mpg>mean(mpg))
-auto_da
+mtcars2 = mutate(mtcars, brand = rownames(mtcars))
+mtcars2
+mtcars2[mtcars2$am==0 & mtcars2$gear > 3  & mtcars2$mpg > mean(mtcars2$mpg),"brand"]
+#mtcars2 %>% 
+  #filter(am==0,gear> 3) %>%
+  #summarise(mean_miles = mean(mpg,na.rm = TRUE)) %>%
+  #filter(am==0,gear >3, mpg > mean_miles) %>%
+  #select(brand)
+
+set.seed(2)
+x = sample(letters[1:5],50, replace=T)
+y = sample(letters[1:3],50, replace=T)
+yt <- table(y)
