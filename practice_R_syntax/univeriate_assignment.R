@@ -26,6 +26,7 @@ round(prop.table(tabl, margin = 1),2)
 #FINDING OUTLIERS
 hist(cens$fnlwgt)
 hist(cens$education.num)
+
 #Catch outliers
 #[q1-1.5IQR,q3 + 1.5IQR]
 get_outlier <- function(x,t){
