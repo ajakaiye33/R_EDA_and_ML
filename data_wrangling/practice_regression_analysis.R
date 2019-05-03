@@ -58,7 +58,7 @@ get_mode <- function(x){
   return(uni[which.max(tabulate(match(x, uni)))])}
 
 for(i in 1:ncol(data_loan3)){
-  if(class(data_loan3[,i])  == "numeric"){
+  if(class(data_loan3[,i])  %in% c("numeric","integer")){
     data_loan3[is.na(data_loan3[,i]), i] = mean(data_loan3[,i], na.rm = TRUE)
     
   }else if(class(data_loan3[,i]) == "character"){
@@ -96,3 +96,56 @@ UC_revolve <- mean(data_loan5$Revolving.CREDIT.Balance) + 3*sd(data_loan5$Revolv
 data_loan5$Revolving.CREDIT.Balance[data_loan5$Revolving.CREDIT.Balance > UC_revolve] <- UC_revolve
 
 summary(data_loan5)
+
+# convert categorical variable to numeric
+# before converting the categorical variable they need to be grouped base on their frequency and group
+# the approach would depend on the frequency of the various groups
+str(data_loan5)
+# some categorical variable
+## Loan.Purpose, Home Ownership, Loan length
+table(data_loan$Loan.Purpose)
+table(data_loan5$Home.Ownership)
+table(data_loan5$Loan.Length)
+# repplace the dot with the mode in loan length
+data_loan5$Loan.Length[data_loan5$Loan.Length == "."] <- get_mode(data_loan5[,"Loan.Length"])
+#verify otput
+table(data_loan5$Loan.Length)
+
+# check percentage of frequency
+round(prop.table(table(data_loan5$Loan.Purpose)),2)
+
+# group other categorical variable
+#sort(round(prop.table(table(data_loan5$Loan.Purpose)),2))
+
+#check the relationship between the target and the interested category
+round(tapply(data_loan5$Interest.Rate, data_loan5$Loan.Purpose,mean))
+# from this we see that car, major_purchase,and educational are similar but interms
+# of frequency percentage major_purpose is more frequent/popular
+data_loan6 <- data_loan5 %>% mutate(Loan.Purpose = ifelse(Loan.Purpose %in% c("car","educational","major_purchase"),"major_purchase", Loan.Purpose),
+                                    Loan.Purpose = ifelse(Loan.Purpose %in% c("home_improvement", "medical","vacation","wedding"), "home_improvement", Loan.Purpose),
+                                    Loan.Purpose = ifelse(Loan.Purpose %in% c("credit_card", "house", "other","small_business"),"credit_card", Loan.Purpose),
+                                    Loan.Purpose = ifelse(Loan.Purpose %in% c("debt_consolidation", "moving"), "debt_consolidation", Loan.Purpose))
+
+#check/verify
+table(data_loan6$Loan.Purpose)
+
+#treat home_ownership categorical variable
+#check for relation ship
+
+round(prop.table(table(data_loan6$Home.Ownership)),2)
+
+round(tapply(data_loan6$Interest.Rate, data_loan6$Home.Ownership, mean))
+# we can see that mortgage, own and rent have a relationship,we can geoup them
+
+#data_loan7 <- data_loan6 %>% mutate(Home.Ownership = ifelse(Home.Ownership %in% c("MORTGAGE", "OWN","RENT"),))
+str(data_loan6)
+library(caret)
+dmy <- dummyVars("~.", data = data_loan6, fullRank = TRUE)
+#View(dmy)
+
+data_loan7 <- data.frame(predict(dmy,newdata = data_loan6))
+View(data_loan7)
+str(data_loan7)
+
+corr_matrix <- data.frame(round(cor(data_loan7[,-c(1)], method = c("pearson")),2))
+write.csv(corr_matrix,"Correlation_loanmart.csv",row.names = FALSE)
