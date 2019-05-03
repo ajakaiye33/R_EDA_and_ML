@@ -147,5 +147,20 @@ data_loan7 <- data.frame(predict(dmy,newdata = data_loan6))
 View(data_loan7)
 str(data_loan7)
 
+#ascertain correlation of variable
+
 corr_matrix <- data.frame(round(cor(data_loan7[,-c(1)], method = c("pearson")),2))
 write.csv(corr_matrix,"Correlation_loanmart.csv",row.names = FALSE)
+
+# we can observed the following:
+#1. Debt-to-income ratio and opencreditlines has high correlation
+#2. Interest rate depends on LoanLength, Amount Requested, FICO-range
+#3. Loanlength and amounted requested is highly correlated
+#4. Monthly income and AmountRequested is Higly correlated
+#5. Revolvingcredit balance and Amount requested is highly correlated
+#6. LoanPurposeHome and LoanpurposeDebt negatively correlated
+
+linregfit <- lm(Interest.Rate ~ . -ID, data = data_loan7)
+#this essentially means, Interest rate as a function of all independent variable except ID
+summary(linregfit)
+
