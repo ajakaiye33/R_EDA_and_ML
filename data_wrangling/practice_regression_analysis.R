@@ -111,6 +111,8 @@ data_loan5$Loan.Length[data_loan5$Loan.Length == "."] <- get_mode(data_loan5[,"L
 #verify otput
 table(data_loan5$Loan.Length)
 
+
+
 # check percentage of frequency
 round(prop.table(table(data_loan5$Loan.Purpose)),2)
 
@@ -134,7 +136,7 @@ table(data_loan6$Loan.Purpose)
 
 round(prop.table(table(data_loan6$Home.Ownership)),2)
 
-round(tapply(data_loan6$Interest.Rate, data_loan6$Home.Ownership, mean))
+#round(tapply(data_loan6$Interest.Rate, data_loan6$Home.Ownership, mean))
 # we can see that mortgage, own and rent have a relationship,we can geoup them
 
 #data_loan7 <- data_loan6 %>% mutate(Home.Ownership = ifelse(Home.Ownership %in% c("MORTGAGE", "OWN","RENT"),))
@@ -147,10 +149,13 @@ data_loan7 <- data.frame(predict(dmy,newdata = data_loan6))
 View(data_loan7)
 str(data_loan7)
 
+
+
 #ascertain correlation of variable
 
 corr_matrix <- data.frame(round(cor(data_loan7[,-c(1)], method = c("pearson")),2))
 write.csv(corr_matrix,"Correlation_loanmart.csv",row.names = FALSE)
+summary(corr_matrix)
 
 # we can observed the following:
 #1. Debt-to-income ratio and opencreditlines has high correlation
@@ -159,8 +164,41 @@ write.csv(corr_matrix,"Correlation_loanmart.csv",row.names = FALSE)
 #4. Monthly income and AmountRequested is Higly correlated
 #5. Revolvingcredit balance and Amount requested is highly correlated
 #6. LoanPurposeHome and LoanpurposeDebt negatively correlated
+# step 3 Model
 
-linregfit <- lm(Interest.Rate ~ . -ID, data = data_loan7)
-#this essentially means, Interest rate as a function of all independent variable except ID
+#At this point you divid your data into two parts: train and test data
+set.seed(42) # stability to our data set
+
+loan_data_nr <- sample(1:nrow(data_loan7), round(0.7*nrow(data_loan7)))
+train_loan_data <- data_loan7[loan_data_nr,]
+test_loan_data <- data_loan7[-loan_data_nr,]
+
+
+#initial model prior to running set() function
+#linregfit <- lm(Interest.Rate ~ . -ID, data = train_loan_data)
+
+#summary(linregfit)
+
+# model after running set() function;we remove variables without star manually(one by one)
+linregfit <- lm(formula = Interest.Rate ~ Amount.Requested + Loan.Length60.months + 
+                  Loan.Purposemajor_purchase + Home.OwnershipNONE + Home.OwnershipOWN + 
+                  Monthly.Income + FICO.Range + Open.CREDIT.Lines + Revolving.CREDIT.Balance + 
+                  Inquiries.in.the.Last.6.Months - Loan.Purposemajor_purchase -Home.OwnershipOWN, data = train_loan_data)
+
+#this essentially means, Interest rate as a function of all independent variable whose p-value > 0.05 or 5%
+## NULL HYPOTHESIS --> M = 0 (Y & X ARE INDEPENDENT)
+## ALTERNATIVE HYPOTHESIS --> M != 0 (Y IS DEPENDENT ON X)
+#only variable with p-value < 0.05 would be included in our model
 summary(linregfit)
+
+step(linregfit) # Automated way of variable that are not needed in our model giving their respective p-value
+
+
+#check for multicolinearity in your data
+library(car)
+#?vif --> variance inflation factors
+?vif
+vif(linregfit) # No MULTICOLINEARITY AS VIF value is < 3(industry std) but if otherwise, the respective variable i.e with VIF > 3 shall be removed from our model
+
+#step 4: Evaluation of our model
 
