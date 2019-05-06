@@ -2,6 +2,8 @@
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+library(caret)
+library(car)
 
 # Step 1: GET THE DATA
 getwd()
@@ -64,7 +66,6 @@ for(i in 1:ncol(data_loan3)){
   }else if(class(data_loan3[,i]) == "character"){
     data_loan3[is.na(data_loan3[,i]),i] = get_mode(data_loan3[,i])
   }
-  
   
 }
 
@@ -132,13 +133,15 @@ data_loan6 <- data_loan5 %>% mutate(Loan.Purpose = ifelse(Loan.Purpose %in% c("c
 table(data_loan6$Loan.Purpose)
 
 #treat home_ownership categorical variable
-#check for relation ship
+#check for relationship
 
 round(prop.table(table(data_loan6$Home.Ownership)),2)
 
-#round(tapply(data_loan6$Interest.Rate, data_loan6$Home.Ownership, mean))
+round(tapply(data_loan6$Interest.Rate, data_loan6$Home.Ownership, mean))
 # we can see that mortgage, own and rent have a relationship,we can geoup them
-
+# I will rather club "other" and none into none for neatness
+data_loan6 <- data_loan5 %>% mutate(Home.Ownership = ifelse(Home.Ownership %in% c("NONE","OTHER"),"OTHER", Home.Ownership))
+table(data_loan6$Home.Ownership)
 #data_loan7 <- data_loan6 %>% mutate(Home.Ownership = ifelse(Home.Ownership %in% c("MORTGAGE", "OWN","RENT"),))
 str(data_loan6)
 library(caret)
@@ -173,7 +176,6 @@ loan_data_nr <- sample(1:nrow(data_loan7), round(0.7*nrow(data_loan7)))
 train_loan_data <- data_loan7[loan_data_nr,]
 test_loan_data <- data_loan7[-loan_data_nr,]
 
-
 #initial model prior to running set() function
 #linregfit <- lm(Interest.Rate ~ . -ID, data = train_loan_data)
 
@@ -181,9 +183,10 @@ test_loan_data <- data_loan7[-loan_data_nr,]
 
 # model after running set() function;we remove variables without star manually(one by one)
 linregfit <- lm(formula = Interest.Rate ~ Amount.Requested + Loan.Length60.months + 
-                  Loan.Purposemajor_purchase + Home.OwnershipNONE + Home.OwnershipOWN + 
-                  Monthly.Income + FICO.Range + Open.CREDIT.Lines + Revolving.CREDIT.Balance + 
-                  Inquiries.in.the.Last.6.Months - Loan.Purposemajor_purchase -Home.OwnershipOWN, data = train_loan_data)
+     Loan.Purposehouse + Loan.Purposemajor_purchase + Loan.Purposemoving + 
+     Loan.Purposeother + Loan.Purposesmall_business + Loan.Purposevacation + 
+     Monthly.Income + FICO.Range + Open.CREDIT.Lines + Revolving.CREDIT.Balance + 
+     Inquiries.in.the.Last.6.Months - Loan.Purposevacation -Open.CREDIT.Lines, data = train_loan_data)
 
 #this essentially means, Interest rate as a function of all independent variable whose p-value > 0.05 or 5%
 ## NULL HYPOTHESIS --> M = 0 (Y & X ARE INDEPENDENT)
@@ -191,7 +194,7 @@ linregfit <- lm(formula = Interest.Rate ~ Amount.Requested + Loan.Length60.month
 #only variable with p-value < 0.05 would be included in our model
 summary(linregfit)
 
-step(linregfit) # Automated way of variable that are not needed in our model giving their respective p-value
+step(linregfit) # Automated way of  getting ride of or removing variable that are not needed in our model giving their respective p-value
 
 
 #check for multicolinearity in your data
@@ -200,5 +203,48 @@ library(car)
 ?vif
 vif(linregfit) # No MULTICOLINEARITY AS VIF value is < 3(industry std) but if otherwise, the respective variable i.e with VIF > 3 shall be removed from our model
 
-#step 4: Evaluation of our model
+#### PREDICTION ON TEST AND TRAIN DATA#########
+predict_train_data <- predict(linregfit, newdata = train_loan_data)
+predict_test_data <- predict(linregfit, newdata = test_loan_data)
+#nrow and length must be same
+length(predict_test_data)
+nrow(test_loan_data)
+
+########### MODEL EVALUATION ##############
+predict_test_data
+predict_train_data
+
+# the interest rate on both test and train data set on actual data
+train_loan_data$Interest.Rate
+test_loan_data$Interest.Rate
+
+
+#also we may. if needed add "predict_test_data" -
+#and "predict_train_data" vectors as a column in the "test_data_loan" and -
+#"train_data_loan" data frame respectively
+test_loan_data$predicted_interest_rate = predict_test_data
+train_loan_data$predicted_interest_rate = predict_train_data
+# we now have both:
+test_loan_data$predicted_interest_rate
+train_loan_data$predicted_interest_rate
+
+train_loan_data$Interest.Rate
+test_loan_data$Interest.Rate
+
+# we can, moving forward calculate accuracy and error
+# There are two kinds of errors known in the industry: 
+# 1.MAPE(Mean Absolute Percentage Error) 2. RMSE(Root Mean Squared Error)
+
+#Using MAPE: mean(abs(predicted-actual)/actual)
+mape <- mean(abs(test_loan_data$predicted_interest_rate - test_loan_data$Interest.Rate)/test_loan_data$Interest.Rate)
+
+accuracy <- 1 - mape #86~87%
+
+##mape on train data
+#mape_train <- mean(abs(train_loan_data$predicted_interest_rate - train_loan_data$Interest.Rate)/train_loan_data$Interest.Rate)
+#accuracy_train <- 1 - mape_train
+
+#Using RMSE(Root Mean Squared Error): sqrt(mean((predicted-actual)^2))
+ rmse <- RMSE(test_loan_data$predicted_interest_rate, test_loan_data$Interest.Rate)
+
 
