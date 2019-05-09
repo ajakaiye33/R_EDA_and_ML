@@ -51,15 +51,27 @@ View(logreg_data2)
 
 ##prone the categorical variable on the basis of their respective p-value relative 
 ##to the target variable through the chi square teest: accept if p-value < 5%
+#this is necessary as a way of determining categorical variable that need to be converted to numerical
 
 #check the structure
 
 str(logreg_data2)
-
+#checking chi-square test for significance
 chisq.test(logreg_data2$status, as.character(logreg_data2$Revenue.Grid)) # not significant
+chisq.test(logreg_data2$occupation, as.character(logreg_data2$Revenue.Grid)) #0.6301
+chisq.test(logreg_data2$occupation_partner, as.character(logreg_data2$Revenue.Grid)) #0.7081
+chisq.test(logreg_data2$home_status, as.character(logreg_data2$Revenue.Grid)) #0.8562
+chisq.test(logreg_data2$self_employed, as.character(logreg_data2$Revenue.Grid)) #0.2762
+chisq.test(logreg_data2$self_employed_partner, as.character(logreg_data2$Revenue.Grid)) #0.2762
+chisq.test(logreg_data2$TVarea, as.character(logreg_data2$Revenue.Grid))  #0.793
+chisq.test(logreg_data2$post_code, as.character(logreg_data2$Revenue.Grid)) #0.5537
+chisq.test(logreg_data2$post_area, as.character(logreg_data2$Revenue.Grid)) #0.5686
+chisq.test(logreg_data2$gender, as.character(logreg_data2$Revenue.Grid)) #0.032
+chisq.test(logreg_data2$region, as.character(logreg_data2$Revenue.Grid)) #0.7179
 
 
+#from the above, only gender categorical variable has a p-value less than 5%
 
+# detect and treat outliers
 
-
-
+summary(logreg_data2)
