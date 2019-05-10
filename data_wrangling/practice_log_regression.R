@@ -69,9 +69,121 @@ chisq.test(logreg_data2$post_area, as.character(logreg_data2$Revenue.Grid)) #0.5
 chisq.test(logreg_data2$gender, as.character(logreg_data2$Revenue.Grid)) #0.032
 chisq.test(logreg_data2$region, as.character(logreg_data2$Revenue.Grid)) #0.7179
 
+# we can wirte the above code better through a for loop
 
+categorical_var <- names(logreg_data2)[sapply(logreg_data2, function(x) is.character(x))]
+for(i in 1:length(categorical_var)){
+  print(categorical_var[i])
+  print(chisq.test(logreg_data2[categorical_var[i]], as.character(logreg_data2$Revenue.Grid)))
+}
 #from the above, only gender categorical variable has a p-value less than 5%
+# remove all other categorical variable other than "gender" from the data set
 
-# detect and treat outliers
+names(logreg_data2)[sapply(logreg_data2, function(x) is.character(x))]
 
-summary(logreg_data2)
+logreg_data3 <- logreg_data2 %>% select(-status,-home_status,-self_employed_partner,
+                                        -post_area,-occupation,-family_income,-TVarea,
+                                        -occupation_partner, -self_employed, -post_code,
+                                        -region)
+View(logreg_data3)
+
+##feature selection: continuous variable
+##similar to the categorical varaible we can determine which variable is 
+##significant enough to make our model
+#Isolate the continuous variable in the data set
+#str(logreg_data3)
+continuos_variable <-  names(logreg_data3)[sapply(logreg_data3, function(x) is.numeric(x))]
+
+## check the p-value of each variable through getting their respective ttest
+
+#names(logreg_data3)[-1]
+#for(i in 1:length(continuos_variable)){
+  #print(continuos_variable[i])
+  #print(t.test(logreg_data3[continuos_variable[i]][logreg_data3$Revenue.Grid==1],
+              # logreg_data3[continuos_variable[i]][logreg_data3$Revenue.Grid==2]))}
+
+
+# children pvalue > 5% drop
+t.test(logreg_data3$children[logreg_data3$Revenue.Grid==1],
+       logreg_data3$children[logreg_data3$Revenue.Grid==2])
+#bal trans pvalue <5%
+t.test(logreg_data3$Balance.Transfer[logreg_data3$Revenue.Grid==1],
+       logreg_data3$Balance.Transfer[logreg_data3$Revenue.Grid==2])
+#life insurance pvalue < 5%
+t.test(logreg_data3$Life.Insurance[logreg_data3$Revenue.Grid==1],
+       logreg_data3$Life.Insurance[logreg_data3$Revenue.Grid==2])
+# average aac bal -----> pvalue <5%
+t.test(logreg_data3$Average.A.C.Balance[logreg_data3$Revenue.Grid==1],
+       logreg_data3$Average.A.C.Balance[logreg_data3$Revenue.Grid==2])
+# inbestment in mutual funds ----> pvalue< 5%
+t.test(logreg_data3$Investment.in.Mutual.Fund[logreg_data3$Revenue.Grid==1],
+       logreg_data3$Investment.in.Mutual.Fund[logreg_data3$Revenue.Grid==2])
+#homeloan pvalue <5% 
+t.test(logreg_data3$Home.Loan[logreg_data3$Revenue.Grid==1],
+       logreg_data3$Home.Loan[logreg_data3$Revenue.Grid==2])
+#investment in equity ---> pvalue < 5%
+t.test(logreg_data3$Investment.in.Equity[logreg_data3$Revenue.Grid==1],
+       logreg_data3$Investment.in.Equity[logreg_data3$Revenue.Grid==2])
+# portfolio balance ---> pvalue <5%
+t.test(logreg_data3$Portfolio.Balance[logreg_data3$Revenue.Grid==1],
+       logreg_data3$Portfolio.Balance[logreg_data3$Revenue.Grid==2])
+#ageband ---->  pvalue < 5% 
+t.test(logreg_data3$age_band[logreg_data3$Revenue.Grid==1],
+       logreg_data3$age_band[logreg_data3$Revenue.Grid==2])
+#average credit card trans ----> pvalue < 5%
+t.test(logreg_data3$Average.Credit.Card.Transaction[logreg_data3$Revenue.Grid==1],
+       logreg_data3$Average.Credit.Card.Transaction[logreg_data3$Revenue.Grid==2])
+
+# term deposite ----> pvalue > 5%
+t.test(logreg_data3$Term.Deposit[logreg_data3$Revenue.Grid==1],
+       logreg_data3$Term.Deposit[logreg_data3$Revenue.Grid==2])
+#investment in taxsaving bond -----> pvalue<5%
+t.test(logreg_data3$Investment.Tax.Saving.Bond[logreg_data3$Revenue.Grid==1],
+       logreg_data3$Investment.Tax.Saving.Bond[logreg_data3$Revenue.Grid==2])
+#online purchase amount -----> pvalue <5%
+t.test(logreg_data3$Online.Purchase.Amount[logreg_data3$Revenue.Grid==1],
+       logreg_data3$Online.Purchase.Amount[logreg_data3$Revenue.Grid==2])
+#investment in commodity ----> pvalue <5%
+t.test(logreg_data3$Investment.in.Commudity[logreg_data3$Revenue.Grid==1],
+       logreg_data3$Investment.in.Commudity[logreg_data3$Revenue.Grid==2])
+
+# medical insurance ----> pvalue <5%
+t.test(logreg_data3$Medical.Insurance[logreg_data3$Revenue.Grid==1],
+       logreg_data3$Medical.Insurance[logreg_data3$Revenue.Grid==2])
+#Investmentderivative ----> pvalue < 5%
+t.test(logreg_data3$Investment.in.Derivative[logreg_data3$Revenue.Grid==1],
+       logreg_data3$Investment.in.Derivative[logreg_data3$Revenue.Grid==2])
+#personalloan -----> pvalue < 5%
+t.test(logreg_data3$Personal.Loan[logreg_data3$Revenue.Grid==1],
+       logreg_data3$Personal.Loan[logreg_data3$Revenue.Grid==2])
+
+#drop home loan and age band
+
+
+logreg_data4 <- logreg_data3 %>% select(-children, -Term.Deposit)
+
+str(logreg_data4)
+
+# convert the categorical variable to numerical;gender column
+# since its just one, we may not use dummyvarse but used a shortcut: mutate with ifelse
+#table(logreg_data4$gender)
+
+logreg_data5 <- logreg_data4 %>% mutate(gender = ifelse(gender=="Uknown", "Female", gender),
+                                        gender = ifelse(gender == "Female", 0,1),
+                                        gender = as.numeric(gender))
+
+str(logreg_data5)
+
+#years_last_move need to be change into years_from_last_move
+logreg_data6 <- logreg_data5 %>% mutate(years_from_last_move = 2019 - year_last_moved) %>% select(-year_last_moved)
+str(logreg_data6)
+
+lapply(logreg_data6, function(x) sum(is.na(x)))
+
+
+
+
+
+
+
+
