@@ -174,16 +174,36 @@ logreg_data5 <- logreg_data4 %>% mutate(gender = ifelse(gender=="Uknown", "Femal
 
 str(logreg_data5)
 
-#years_last_move need to be change into years_from_last_move
+#years_last_move need to be change into years_from_last_move(derived variable)
 logreg_data6 <- logreg_data5 %>% mutate(years_from_last_move = 2019 - year_last_moved) %>% select(-year_last_moved)
 str(logreg_data6)
 
 lapply(logreg_data6, function(x) sum(is.na(x)))
+#logreg_data7 <- logreg_data6
 
+#UC_RCB <- mean(ldata5$Revolving.CREDIT.Balance) + 3*sd(ldata5$Revolving.CREDIT.Balance)
+#ldata5$Revolving.CREDIT.Balance[ldata5$Revolving.CREDIT.Balance > UC_RCB] <- UC_RCB
+#detecting and treatment of outlier in log regression mean +- 3std dev
+#logreg_data7$Average.Credit.Card.Transaction[logreg_data7$Revenue.Grid == 1]
+#logreg_data7$Average.Credit.Card.Transaction[logreg_data7$Revenue.Grid == 2]
 
+#Uc_grd1 <- mean(logreg_data7$Average.Credit.Card.Transaction[logreg_data7$Revenue.Grid == 1]) + 3* sd(logreg_data7$Average.Credit.Card.Transaction[logreg_data7$Revenue.Grid == 1])
+#logreg_data7$Average.Credit.Card.Transaction[logreg_data7$Average.Credit.Card.Transaction[logreg_data7$Revenue.Grid == 1] > Uc_grd1] <- Uc_grd1
 
+#Uc_grd2 <- mean(logreg_data7$Average.Credit.Card.Transaction[logreg_data7$Revenue.Grid == 2]) + 3* sd(logreg_data7$Average.Credit.Card.Transaction[logreg_data7$Revenue.Grid == 2])
+#logreg_data7$Average.Credit.Card.Transaction[logreg_data7$Average.Credit.Card.Transaction[logreg_data7$Revenue.Grid == 2] > Uc_grd2] <- Uc_grd2
 
+#boxplot( logreg_data7$Average.Credit.Card.Transaction[logreg_data7$Revenue.Grid == 2])
+#logreg_data7 <- logreg_data6$Average.Credit.Card.Transaction %>% filter(Revenue.Grid == 1) 
 
+# convert the target's binary indicator from 2,1 to 0,1
 
+logreg_data7 <- logreg_data6 %>% mutate(Revenue.Grid = ifelse(Revenue.Grid == 2,0,1))
 
+str(logreg_data7)
+
+##use stratified sampling to split the data into train and test
+train_index <- createDataPartition(logreg_data7$Revenue.Grid,p = 0.7,list = FALSE)
+train_data <-  logreg_data7[train_index,]
+test_data <- logreg_data7[-train_index,]
 
