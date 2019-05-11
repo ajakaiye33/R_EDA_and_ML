@@ -202,8 +202,46 @@ logreg_data7 <- logreg_data6 %>% mutate(Revenue.Grid = ifelse(Revenue.Grid == 2,
 
 str(logreg_data7)
 
-##use stratified sampling to split the data into train and test
+##use "stratified sampling" to split the data into train and test
 train_index <- createDataPartition(logreg_data7$Revenue.Grid,p = 0.7,list = FALSE)
 train_data <-  logreg_data7[train_index,]
 test_data <- logreg_data7[-train_index,]
 
+#Stratified sampling is prefered in logistic regression
+prop.table(table(train_data$Revenue.Grid))
+prop.table(table(test_data$Revenue.Grid))
+
+#see whether there is a differnce when Random sampling is used instead
+#train_random_index <- sample(1:nrow(logreg_data7), round(0.7*nrow(logreg_data7)))
+#train_data_random <- logreg_data7[train_random_index,]
+#test_data_random <- logreg_data7[-train_random_index,]
+
+#prop.table(table(train_data_random$Revenue.Grid))
+#prop.table(table(test_data_random$Revenue.Grid))
+#we will do a linear regression before a logistic regression so as to treat multincolinearity
+
+#linregfit <- lm(Revenue.Grid ~. -REF_NO, data = train_data)
+library(car)
+vif(linregfit) # according to industry standard multicolinearity should not exceed 3
+
+linregfit <- lm(Revenue.Grid ~. -REF_NO -Investment.in.Derivative -Investment.in.Equity -Investment.in.Commudity -Portfolio.Balance, data = train_data)
+sort(vif(linregfit),decreasing = T) #remove:Investment.in.Derivative,Investment.in.Equity,Investment.in.Commudity,Portfolio.Balance
+
+#logistic regression;copy the above arguement
+
+#log_reg_fit <- glm(as.factor(Revenue.Grid) ~. -REF_NO -Investment.in.Derivative -Investment.in.Equity -Investment.in.Commudity -Portfolio.Balance, family = "binomial", data = train_data)
+summary(log_reg_fit)
+#use the step function to remove variable thats not significant
+step(log_reg_fit)
+
+log_reg_fit <- glm(formula = as.factor(Revenue.Grid) ~ Average.Credit.Card.Transaction + 
+                     Balance.Transfer + Life.Insurance + Medical.Insurance + Average.A.C.Balance + 
+                     Personal.Loan + Investment.in.Mutual.Fund + Investment.Tax.Saving.Bond + 
+                     Home.Loan + Online.Purchase.Amount, family = "binomial", 
+                   data = train_data)
+summary(log_reg_fit)
+
+# prediction
+revenue_grid_pred_test <- predict(log_reg_fit, newdata = test_data, type = c("response"))
+
+# evaluation
