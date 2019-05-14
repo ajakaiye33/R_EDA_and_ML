@@ -244,4 +244,71 @@ summary(log_reg_fit)
 # prediction
 revenue_grid_pred_test <- predict(log_reg_fit, newdata = test_data, type = c("response"))
 
-# evaluation
+# include prediction as a column in both the train and test data
+test_data$prediction <- predict(log_reg_fit, newdata = test_data, type = c("response"))
+train_data$prediction <- predict(log_reg_fit, newdata = train_data, type = c("response"))
+
+# view to verify
+View(train_data)
+View(test_data)
+
+#the final outcome using 0.5 as a threshold/cut off probability
+test_data$prediction_outcome <- ifelse(test_data$prediction > 0.5,1,0)
+train_data$prediction_outcome <- ifelse(train_data$prediction > 0.3,1,0) # reduce the threshold from 0.5 to 0.3 to cut down on the false negative FN
+
+# view to verify
+View(test_data)
+View(train_data)
+
+# doing the confusion matrix
+confusionMatrix(as.factor(test_data$prediction_outcome), as.factor(test_data$Revenue.Grid),
+                positive = levels(as.factor(test_data$Revenue.Grid))[2])
+
+confusionMatrix(as.factor(train_data$prediction_outcome), as.factor(train_data$Revenue.Grid),
+                positive = levels(as.factor(train_data$Revenue.Grid))[2])
+
+
+#Graphical Ilustration of imbalance learning
+#ie Alot My Actual 1 observations have a predicted probability btw 0.1 - 0.5 or closer to 0
+ggplot(train_data,aes(prediction, color = as.factor(Revenue.Grid))) + geom_density(size=1) +
+  ggtitle("Training data predicted score")
+
+
+#methods used to handle the imbalance:
+#1.OVERSAMPLING
+#2. UNDERSAMPLING
+#3. SMOTE
+
+# USING OVERSAMPLING
+colnames_train <- colnames(train_data)
+colname_x <- c(colnames_train[c(1:11)], colnames_train[c(12:21)])
+up_train <- upSample(x = train_data[,colnames(train_data) %in% colname_x],
+                     y = as.factor(train_data$Revenue.Grid))
+#oversampling, using the upsample function creates an additonal column called CLASS*
+View(up_train)
+prop.table(table(up_train$Class))
+
+# apply logistic regression using upsample data(change just revenuegride and train data to class and upsampling data respectively)
+logref_upsample <- glm(formula = as.factor(Class) ~ Average.Credit.Card.Transaction + 
+                         Balance.Transfer + Life.Insurance + Medical.Insurance + Average.A.C.Balance + 
+                         Personal.Loan + Investment.in.Mutual.Fund + Investment.Tax.Saving.Bond + 
+                         Home.Loan + Online.Purchase.Amount, family = "binomial", 
+                       data = up_train)
+
+up_train$prediction <- predict(logref_upsample,newdata = up_train, type = c("response"))
+up_train$predicted_outcome <- ifelse(up_train$prediction > 0.5,1,0)
+#turn to factor why?
+str(up_train)
+up_train$predicted_outcome <- as.factor(up_train$predicted_outcome)
+View(up_train)
+
+# apply confusion matrix on upsample data
+confusionMatrix(up_train$predicted_outcome, up_train$Class)
+
+# # graph again with the upsamle train data to see difference
+
+ggplot(up_train,aes(prediction, color = as.factor(Class))) + geom_density(size=1) +
+  ggtitle("Upsampled Training data predicted score")
+
+
+  
