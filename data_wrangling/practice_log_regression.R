@@ -281,12 +281,18 @@ ggplot(train_data,aes(prediction, color = as.factor(Revenue.Grid))) + geom_densi
 
 # USING OVERSAMPLING
 colnames_train <- colnames(train_data)
-colname_x <- c(colnames_train[c(1:11)], colnames_train[c(12:21)])
+colname_x <- c(colnames_train[c(1:12)], colnames_train[c(14:21)])
 up_train <- upSample(x = train_data[,colnames(train_data) %in% colname_x],
                      y = as.factor(train_data$Revenue.Grid))
+#better way of doing oversampling
+up_train_t <- upSample(x = train_data[,colnames(train_data) != "Revenue.Grid"],
+                       y = as.factor(train_data$Revenue.Grid))
+View(up_train_t)
 #oversampling, using the upsample function creates an additonal column called CLASS*
 View(up_train)
 prop.table(table(up_train$Class))
+prop.table(table(up_train_t$Class))
+
 
 # apply logistic regression using upsample data(change just revenuegride and train data to class and upsampling data respectively)
 logref_upsample <- glm(formula = as.factor(Class) ~ Average.Credit.Card.Transaction + 
@@ -295,12 +301,16 @@ logref_upsample <- glm(formula = as.factor(Class) ~ Average.Credit.Card.Transact
                          Home.Loan + Online.Purchase.Amount, family = "binomial", 
                        data = up_train)
 
+#get a prediction with the predict function
 up_train$prediction <- predict(logref_upsample,newdata = up_train, type = c("response"))
+
+# applying a probability threshold/cut-off of 0.5
 up_train$predicted_outcome <- ifelse(up_train$prediction > 0.5,1,0)
 #turn to factor why?
 str(up_train)
 up_train$predicted_outcome <- as.factor(up_train$predicted_outcome)
 View(up_train)
+str(up_train)
 
 # apply confusion matrix on upsample data
 confusionMatrix(up_train$predicted_outcome, up_train$Class)
@@ -311,4 +321,41 @@ ggplot(up_train,aes(prediction, color = as.factor(Class))) + geom_density(size=1
   ggtitle("Upsampled Training data predicted score")
 
 
+# applying predict on test data; prediction is based on the model from the upsample data
+View(test_data)
+
+test_data$upsample_prediction <- predict(logref_upsample, newdata = test_data,type = "response")
+test_data$upsample_prediction_outcome <- ifelse(test_data$upsample_prediction > 0.5,1,0)
+
+# look at the performance from the confusion matrix
+# using the original prediction and the prediction from the upsample data
+
+confusionMatrix(as.factor(test_data$prediction_outcome), as.factor(test_data$Revenue.Grid),
+                positive = levels(as.factor(test_data$Revenue.Grid))[2])# poor very low prediction of 1's our optimization objective(sensitivity 55% and FN=111)
+
+confusionMatrix(as.factor(test_data$upsample_prediction_outcome), as.factor(test_data$Revenue.Grid),
+                positive = levels(as.factor(test_data$Revenue.Grid))[2]) # with the upsampleprediction outcome our model perfomed better with sensitivity incresaing to about 90 % and FN reducing to 24 
+
+
+# this is achieve with abitrarilly using the threshold of 0.5 but we can 
+#finetune our model by determining the sweet spot of threshold to apply
+threshold <- seq(0.1,0.9,0.05)
+accuracy <- NULL
+
+for(i in seq(along = threshold)){
+  prediction_check <- ifelse(logref_upsample$fitted.values >= threshold[i],1,0)
+  total_correct = length(which(up_train$Class == prediction_check))
+  percentage_correct = total_correct/length(prediction_check)
+  accuracy <- c(accuracy, percentage_correct)
   
+}
+
+plot(threshold,accuracy,pch=19,type='b',xlab ="Cutoffs/threshold",ylab = 'Accuracy%')
+
+# from this graph we can see that our model would perform to its utmost at the point of 0.4
+
+up_train$predicted_outcome <- ifelse(up_train$prediction > 0.5,1,0)
+
+
+confusionMatrix(as.factor(test_data$upsample_prediction_outcome), as.factor(test_data$Revenue.Grid),
+                positive = levels(as.factor(test_data$Revenue.Grid))[2]) # with the upsampleprediction outcome our model perfomed better with sensitivity incresaing to about 90 % and FN reducing to 24 
