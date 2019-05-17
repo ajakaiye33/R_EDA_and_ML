@@ -352,10 +352,13 @@ for(i in seq(along = threshold)){
 
 plot(threshold,accuracy,pch=19,type='b',xlab ="Cutoffs/threshold",ylab = 'Accuracy%')
 
-# from this graph we can see that our model would perform to its utmost at the point of 0.4
+# from this graph we can see that our model would perform to its utmost at the point of 0.45
 
-up_train$predicted_outcome <- ifelse(up_train$prediction > 0.5,1,0)
+# if we go ahead and adjust the thresold of the upsampling outcome using test data from 0.5 to 0.45 we would see some improvement
+test_data$upsample_prediction_outcome <- ifelse(test_data$upsample_prediction > 0.45,1,0)
 
 
 confusionMatrix(as.factor(test_data$upsample_prediction_outcome), as.factor(test_data$Revenue.Grid),
                 positive = levels(as.factor(test_data$Revenue.Grid))[2]) # with the upsampleprediction outcome our model perfomed better with sensitivity incresaing to about 90 % and FN reducing to 24 
+
+# sensitivity shotup to 91% and FN further reduce to 20
