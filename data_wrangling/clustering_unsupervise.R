@@ -50,6 +50,7 @@ library(ggplot2)
 winey_data_cluster_scaled <- data.frame(winey_data_cluster_scaled)
 winey_data_cluster_scaled$clusternumber = kmeans_result$cluster
 View(winey_data_cluster_scaled)
+colnames(winey_data_cluster_scaled)
 
 ggplot(winey_data_cluster_scaled,
        aes(fixed.acidity,citric.acid, color = as.factor(clusternumber))) + geom_point()
@@ -75,6 +76,8 @@ kmeans_result$centers
 
   
 #finding out the optimum number of clusters
+
+############### CENTROID BASE CLUSTERING METHODS ######################
 
 ## Method 1: Elbow method: This plots different intra cluster distances for different K values
 #this method takes  more congizance of intercluster than intra-clusters
@@ -111,7 +114,7 @@ km_result6$centers
 ## Method: 2 Average Silhouette Method
 ?fviz_nbclust
 fviz_nbclust(winey_data_cluster_scaled[,-c(12)],kmeans,method = "silhouette")
-# with this the ideal cluster shoulf be two
+# with this method, the ideal cluster shoulf be two
 
 ## Method 3: Gap_ statistic method ; 
 #this method runs Morte Carlo Simulations internally to test which K value gives itself the best separation between clusters and best closeness among clusters
@@ -123,3 +126,23 @@ install.packages("NbClust") # this method aggregate about 30 methods together
 library(NbClust)
 NbClust(winey_data_cluster_scaled[,-c(12)],
         diss = NULL, method = "kmeans")
+#  according to Nbclust result out of 23 6 proposed 2 as the ideal cluster
+# and secondly out of 23, 8 propose 6 as the ideal cluster(so apply both on  kmeans function and compare with biz obj)
+
+
+####################### DISTANCE/CONNECTIO BASED CLUSTERING METHOD#######################
+
+# Hierachical clustering
+# Dendogram- helps us to understand intra cluster distance
+# combination of Elbow plot and Dendogram Diagram can help to find out the optimum number of cluster
+#How to create a hierachical cluster?
+
+# Method 1: Hierarchical clustering
+#  2 diadvantages of  hierarchical cluster: 
+#a. Doesn't say anything about the behaviour of the cluster
+#b, BECOME UNSCALABLE WHEN HUGE DATA INVOLVE
+
+h_cluster <- hclust(dist(winey_data_cluster_scaled[,-c(12)]))
+plot(h_cluster)
+#cut the dendrogram
+h_cluster_result <- cutree(h_cluster,6)
