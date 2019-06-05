@@ -6,7 +6,8 @@ library(rpart)
 library(rpart.plot)
 
 
-# Theory:
+#####################################Theory Notes on Decision Tree Algorithm############################:
+
 # It has a structre like a tree. In the leaf-note lies the prediction and decision
 # spliting is base on the order of importance of the variable with the highest posibility/level of reduction of impurity
 # the  binary split will continue until both spectrum of classifaction are 100% each
@@ -36,6 +37,23 @@ library(rpart.plot)
 # with DT, there wont be the need of using t-test and chis-square for feature selection
 # DT automatically position the important variable at the top of the tree structure
 
+
+#predict_test <- predict(tree_model_prune, newdata = test_house_data)
+#length(predict_test)
+#dim(test_house_data)
+#dim(train_house_data$Price)
+
+#in our data, there is no issue of overfittng. if the xerro values had been fluctuating 
+#and the plotcp curve depicts growth( becomming u in shape) then overfitting could have been said
+# have taken place and would cut or prun accordingly
+
+# where there is overfitting and there is need for prunning(post prunning) we would run the code:
+
+#tree_model_prune <- prune(tree_model,cp = related CP value)
+# the lower value of xerro before there was an unexpected increase, the related CP(complexity parameter) value would be used as the parameter 
+#value of the cp
+# the value of the prune version is used for prediction for the training and testing data
+############################################## End of Theory Notes###################################
 
 #setup directory
 setwd("~/Documents/edvancer/Data")
@@ -146,7 +164,7 @@ write.csv(predict_forest_test, "Hedgar_Ajakaiye_P1_part2.csv", row.names = F)
 
 
 
-
+# TESTING! TESTING!! TESTING!!! PREPROCESSING
 eva_training_data <- train_house_data
 
 # divide eva_training_data into mini_eva_train and mini_eva_test
@@ -277,22 +295,4 @@ accuracy_gbm_train <- 1 - gbm_mape_train
  
  
  
- #predict_test <- predict(tree_model_prune, newdata = test_house_data)
-#length(predict_test)
-#dim(test_house_data)
-#dim(train_house_data$Price)
-
-
-
-#in our data, there is no issue of overfittng. if the xerro values had been fluctuating 
-#and the plotcp curve depicts growth( becomming u in shape) then overfitting could have been said
-# have taken place and would cut or prun accordingly
-
-# where there is overfitting and there is need for prunning(post prunning) we would run the code:
-
-#tree_model_prune <- prune(tree_model,cp = related CP value)
-# the lower value of xerro before there was an unexpected increase, the related CP(complexity parameter) value would be used as the parameter 
-#value of the cp
-# the value of the prune version is used for prediction for the training and testing data
-
-
+ 
