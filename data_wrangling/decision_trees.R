@@ -2,6 +2,9 @@
 library(dplyr)
 library(caret)
 library(car)
+library(rpart)
+library(rpart.plot)
+
 
 # Theory:
 # It has a structre like a tree. In the leaf-note lies the prediction and decision
@@ -61,9 +64,14 @@ View(all_house_data)
 
 
 # get ride of some columns
-all_house_data1 <- all_house_data %>% select(-SellerG, -Address,-Postcode,-CouncilArea,-Suburb)
+all_house_data1 <- all_house_data %>% select(-SellerG, -Address,-Postcode,-Suburb, -CouncilArea, -Method)
 
-str(all_house_data1)
+#str(all_house_data1)
+#unique(all_house_data1$CouncilArea)
+#replace empty string under councilarea with unknown
+#all_house_data1$CouncilArea[all_house_data1$CouncilArea==""] <- "Unknown"
+#str(all_house_data1)
+
 CreateDummies=function(data,var,freq_cutoff=0){
   t=table(data[,var])
   t=t[t>freq_cutoff]
@@ -87,65 +95,194 @@ CreateDummies=function(data,var,freq_cutoff=0){
 
 
 
-all_house_data2 = CreateDummies(all_house_data1, "Type",0)
-all_house_data3 = CreateDummies(all_house_data2, "Method",0)
+all_house_data2 = CreateDummies(all_house_data1, "Type",50)
+#all_house_data3 = CreateDummies(all_house_data2, "Method",50)
+#all_house_data3 = CreateDummies(all_house_data3, "CouncilArea",50)
 
 
-glimpse(all_house_data3)
+
+
+glimpse(all_house_data2)
 
 # detect and treat missing values
-all_house_data4 <- all_house_data3[!((is.na(all_house_data3$Price)) & all_house_data3$data== "train"),]
+all_house_data3 <- all_house_data2[!((is.na(all_house_data2$Price)) & all_house_data2$data== "train"),]
 
-all_house_data5 <- all_house_data4
+all_house_data4 <- all_house_data3
 
-for(col in names(all_house_data5)){
-  if(sum(is.na(all_house_data5[,col])) > 0 & !(col %in% c("data", "Price"))){
-    all_house_data5[is.na(all_house_data5[,col]), col] = mean(all_house_data5[all_house_data5$data == "train",col],na.rm = T)
+for(col in names(all_house_data4)){
+  if(sum(is.na(all_house_data4[,col])) > 0 & !(col %in% c("data", "Price"))){
+    all_house_data4[is.na(all_house_data4[,col]), col] = median(all_house_data4[all_house_data4$data == "train",col],na.rm = T)
   }
   
 }
 
-lapply(all_house_data5, function(x) sum(is.na(x)))
+lapply(all_house_data4, function(x) sum(is.na(x)))
+
+str(all_house_data4)
+summary(all_house_data4)
 
 #separate the training data set from the test data set
 
-train_house_data <- all_house_data5 %>% filter(data == "train") %>% select(-data) 
-test_house_data <- all_house_data5 %>% filter(data == "test") %>% select(-data, -Price)
+train_house_data <- all_house_data4 %>% filter(data == "train") %>% select(-data) 
+test_house_data <- all_house_data4 %>% filter(data == "test") %>% select(-data, -Price)
 
 View(train_house_data)
+View(test_house_data)
 # both train and test data are free of missing values
 lapply(train_house_data, function(x) sum(is.na(x)))
 lapply(test_house_data, function(x) sum(is.na(x)))
 
-# Check the VIF of both. For VIF to work training must first be fit into a linear regression
-linregfit <- lm(Price ~.-Method_S -Method_VB -Bedroom2, data = train_house_data)
-summary(linregfit)
+lin_fit_train <- lm(Price ~.- Bedroom2,data = train_house_data)
+summary(lin_fit_train)
 
-sort(vif(linregfit),decreasing = T)
+sort(vif(lin_fit_train),decreasing = T)
 
-# Build Decision Tree 
-install.packages("rpart")
-install.packages("rpart.plot")
-library(rpart)
-library(rpart.plot)
-tree_model <- rpart(Price ~.-Method_S -Method_VB -Bedroom2, data = train_house_data)
+ran_forest_fit_train = randomForest(Price ~.- Bedroom2,data = train_house_data)
+varImpPlot(ran_forest_fit_train)
+?predict()
+predict_forest_test <- predict(ran_forest_fit_train,newdata = test_house_data,type = "class")
 
-rpart.plot(tree_model)
+write.csv(predict_forest_test, "Hedgar_Ajakaiye_P1_part2.csv", row.names = F)
+
+
+
+
+eva_training_data <- train_house_data
+
+# divide eva_training_data into mini_eva_train and mini_eva_test
+
+set.seed(42)
+
+training_index <- sample(1:nrow(eva_training_data), round(0.7*nrow(eva_training_data)))
+mini_eva_train <- eva_training_data[training_index,]
+mini_eva_test <- eva_training_data[-training_index,]
+
+dim(mini_eva_train)
+dim(mini_eva_test)
+
+# 1. Build LINEAR regression model:
+
+lin_model <- lm(Price ~.-CouncilArea_Unknown -Bedroom2 -Landsize -Method_SP -CouncilArea_Monash -CouncilArea_PortPhillip - CouncilArea_GlenEira, data = mini_eva_train)
+# testing and evaluating our models we would split the training data
+summary(lin_model)
+
+sort(vif(lin_model),decreasing = T)
+
+# Predict on test data Linear
+predict_test_mini <- predict(lin_model, newdata = mini_eva_test)
+predict_train_mini <- predict(lin_model, newdata = mini_eva_train)
+
+#MAPE & RMSE Evaluation of Linear Model
+
+mini_mape_train <- mean(abs(predict_train_mini - mini_eva_train$Price)/mini_eva_train$Price)
+accuracy_min_train <- 1 - mini_mape_train #69%
+
+mini_mape_test <- mean(abs(predict_test_mini - mini_eva_test$Price)/mini_eva_test$Price)
+mini_mape_train <- mean(abs(predict_train_mini - mini_eva_train$Price)/mini_eva_train$Price)
+
+accuracy_mini_test <- 1 - mini_mape_test
+accuracy_mini_train <- 1 - mini_mape_train
+
+
+rmse_mini_test <- RMSE(predict_test_mini, mini_eva_test$Price)
+rmse_mini_train <- RMSE(predict_train_mini, mini_eva_train$Price)
+
+# 2. Build Decision Tree Model 
+
+
+tree_model <- rpart(Price ~.-CouncilArea_Unknown -Bedroom2 -Landsize -Method_SP -CouncilArea_Monash -CouncilArea_PortPhillip - CouncilArea_GlenEira, data = mini_eva_train)
+
+rpart.plot(tree_model, cex = 0.8)
 ?rpart.plot()
 summary(tree_model)
 tree_model$variable.importance # find out the ranking of variable
 
 #check for possibility of overfitting
-test_pred <- predict(tree_model, test_house_data)
-test_house_data
-
-# do confusion matrix
+tree_predict_test <- predict(tree_model, newdata = mini_eva_test)
+tree_predict_train <- predict(tree_model, newdata = mini_eva_train)
 
 # carrout preprunning
 
 #carryout post prunning
-printcp(tree_model)
-plotcp(tree_model)
+#?prune()
+#tree_model_prune <- prune(tree_model, cp =0.010495)
+#printcp(tree_model)
+#rpart.plot(tree_model_prune, cex = 0.8)
+#plotcp(tree_model)
+#printcp(tree_model_prune)
+#plotcp(tree_model_prune)
+
+tree_mape_test <- mean(abs(tree_predict_test - mini_eva_test$Price)/mini_eva_test$Price)
+tree_mape_train <- mean(abs(tree_predict_train - mini_eva_train$Price)/mini_eva_train$Price)
+
+tree_accuracy_mape <- 1 - tree_mape_test # 68%
+tree_accuracy_mape_train <- 1 - tree_mape_train
+
+tree_rmse_test <- RMSE(tree_predict, mini_eva_test$Price) #480273.3
+
+
+#3 model: Random forest model
+library(randomForest)
+rf_model <- randomForest(Price ~.-CouncilArea_Unknown -Bedroom2 -Landsize -Method_SP -CouncilArea_Monash -CouncilArea_PortPhillip - CouncilArea_GlenEira, data = mini_eva_train)
+
+
+rf_predict <- predict(rf_model,newdata = mini_eva_test, type = "class")
+rf_predict_train <- predict(rf_model,newdata = mini_eva_train, type = "class")
+
+#write.csv(rf_model, "Hedgar_Ajakaiye_P1_part2.csv", row.names = F)
+
+ 
+ 
+ rf_mape_test <- mean(abs(rf_predict - mini_eva_test$Price)/mini_eva_test$Price)
+ rf_mape_train <- mean(abs(rf_predict_train - mini_eva_train$Price)/mini_eva_train$Price)
+ 
+ 
+ 
+ rf_accuracy_test <- 1 - rf_mape_test#79%
+ rf_accuracy_train <- 1 - rf_mape_train
+ 
+ 
+ dim(mini_eva_train)
+ dim(mini_eva_test)
+ length(rf_predict)
+ 
+ varImpPlot(rf_model)
+ 
+#mean(abs(rf_predict - mini_eva_train$Price)/mini_eva_train$Price)
+ 
+rf_rmse_test <- RMSE(rf_predict, mini_eva_test$Price)
+
+library(gbm)
+
+# Gradient Boost Method GBM
+
+gbm_model <- gbm(Price ~.-CouncilArea_Unknown -Bedroom2 -Landsize -Method_SP -CouncilArea_Monash -CouncilArea_PortPhillip - CouncilArea_GlenEira, 
+                 data = mini_eva_train,
+                 distribution = "gaussian",
+                 n.trees = 1000,interaction.depth = 3)
+
+
+predict_gbm_test <- predict(gbm_model, newdata = mini_eva_test, n.trees = 1000)
+predict_gbm_train <- predict(gbm_model, newdata = mini_eva_train, n.trees = 1000)
+
+gbm_mape_test <- mean(abs(predict_gbm_test - mini_eva_test$Price)/mini_eva_test$Price)
+gbm_mape_train <- mean(abs(predict_gbm_train - mini_eva_train$Price)/mini_eva_train$Price)
+
+
+ 
+accuracy_gbm_test <- 1 - gbm_mape_test
+
+accuracy_gbm_train <- 1 - gbm_mape_train
+
+ 
+ 
+ 
+ #predict_test <- predict(tree_model_prune, newdata = test_house_data)
+#length(predict_test)
+#dim(test_house_data)
+#dim(train_house_data$Price)
+
+
 
 #in our data, there is no issue of overfittng. if the xerro values had been fluctuating 
 #and the plotcp curve depicts growth( becomming u in shape) then overfitting could have been said
