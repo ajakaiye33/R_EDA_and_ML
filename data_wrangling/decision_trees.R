@@ -82,7 +82,7 @@ View(all_house_data)
 
 
 # get ride of some columns
-all_house_data1 <- all_house_data %>% select(-SellerG, -Address,-Postcode,-Suburb, -CouncilArea, -Method)
+all_house_data1 <- all_house_data %>% select(-Address,-Postcode,-Suburb, -CouncilArea,-SellerG)
 
 #str(all_house_data1)
 #unique(all_house_data1$CouncilArea)
@@ -111,9 +111,20 @@ CreateDummies=function(data,var,freq_cutoff=0){
   return(data)
 }
 
+str(all_house_data1)
 
+ 
+ 
+ for(var in c("Type","Method")){
+   all_house_data2 = CreateDummies(all_house_data1,var,100)
+ }
 
-all_house_data2 = CreateDummies(all_house_data1, "Type",50)
+glimpse(all_house_data2)
+
+all_house_data2 <- all_house_data2 %>% select(-Type)
+View(all_house_data2)
+
+#all_house_data2 = CreateDummies(all_house_data1, "Type",50)
 #all_house_data3 = CreateDummies(all_house_data2, "Method",50)
 #all_house_data3 = CreateDummies(all_house_data3, "CouncilArea",50)
 
@@ -165,6 +176,7 @@ write.csv(predict_forest_test, "Hedgar_Ajakaiye_P1_part2.csv", row.names = F)
 
 
 # TESTING! TESTING!! TESTING!!! PREPROCESSING
+View(train_house_data)
 eva_training_data <- train_house_data
 
 # divide eva_training_data into mini_eva_train and mini_eva_test
@@ -177,10 +189,11 @@ mini_eva_test <- eva_training_data[-training_index,]
 
 dim(mini_eva_train)
 dim(mini_eva_test)
+str(mini_eva_train)
 
 # 1. Build LINEAR regression model:
 
-lin_model <- lm(Price ~.-CouncilArea_Unknown -Bedroom2 -Landsize -Method_SP -CouncilArea_Monash -CouncilArea_PortPhillip - CouncilArea_GlenEira, data = mini_eva_train)
+lin_model <- lm(Price ~.-Bedroom2 -Method_S,data = mini_eva_train)
 # testing and evaluating our models we would split the training data
 summary(lin_model)
 
@@ -205,13 +218,18 @@ accuracy_mini_train <- 1 - mini_mape_train
 rmse_mini_test <- RMSE(predict_test_mini, mini_eva_test$Price)
 rmse_mini_train <- RMSE(predict_train_mini, mini_eva_train$Price)
 
+2124667/rmse_mini_test
 # 2. Build Decision Tree Model 
 
-
-tree_model <- rpart(Price ~.-CouncilArea_Unknown -Bedroom2 -Landsize -Method_SP -CouncilArea_Monash -CouncilArea_PortPhillip - CouncilArea_GlenEira, data = mini_eva_train)
+?rpart
+library(rpart)
+library(rpart.plot)
+tree_model <- rpart(Price ~.-Bedroom2 -Method_S,data = mini_eva_train, method = "anova")
 
 rpart.plot(tree_model, cex = 0.8)
 ?rpart.plot()
+printcp(tree_model)
+plotcp(tree_model)
 summary(tree_model)
 tree_model$variable.importance # find out the ranking of variable
 
@@ -241,10 +259,11 @@ tree_rmse_test <- RMSE(tree_predict, mini_eva_test$Price) #480273.3
 
 #3 model: Random forest model
 library(randomForest)
-rf_model <- randomForest(Price ~.-CouncilArea_Unknown -Bedroom2 -Landsize -Method_SP -CouncilArea_Monash -CouncilArea_PortPhillip - CouncilArea_GlenEira, data = mini_eva_train)
+?randomForest
+rf_model <- randomForest(Price ~.-Bedroom2 -Method_S,data = mini_eva_train)
 
 
-rf_predict <- predict(rf_model,newdata = mini_eva_test, type = "class")
+rf_predict <- predict(rf_model,newdata = mini_eva_test)
 rf_predict_train <- predict(rf_model,newdata = mini_eva_train, type = "class")
 
 #write.csv(rf_model, "Hedgar_Ajakaiye_P1_part2.csv", row.names = F)
@@ -274,13 +293,13 @@ library(gbm)
 
 # Gradient Boost Method GBM
 
-gbm_model <- gbm(Price ~.-CouncilArea_Unknown -Bedroom2 -Landsize -Method_SP -CouncilArea_Monash -CouncilArea_PortPhillip - CouncilArea_GlenEira, 
+gbm_model <- gbm(Price ~.-Bedroom2 -Method_S, 
                  data = mini_eva_train,
                  distribution = "gaussian",
-                 n.trees = 1000,interaction.depth = 3)
+                 n.trees = 2000,interaction.depth = 3)
 
 
-predict_gbm_test <- predict(gbm_model, newdata = mini_eva_test, n.trees = 1000)
+predict_gbm_test <- predict(gbm_model, newdata = mini_eva_test, n.trees = 2000)
 predict_gbm_train <- predict(gbm_model, newdata = mini_eva_train, n.trees = 1000)
 
 gbm_mape_test <- mean(abs(predict_gbm_test - mini_eva_test$Price)/mini_eva_test$Price)
